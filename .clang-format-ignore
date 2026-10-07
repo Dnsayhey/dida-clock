@@ -1,0 +1,5 @@
+# 生成的字体数据，不要格式化
+components/assets/font/*
+# 托管组件与构建产物
+managed_components/*
+build/*

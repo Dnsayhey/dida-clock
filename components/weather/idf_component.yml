@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.5"
+  # IDF 6.0 已移除内置 json 组件，cJSON 改为从组件注册表引入。
+  espressif/cjson: "^1.7.19"

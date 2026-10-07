@@ -1,0 +1,16 @@
+menu "DIDA 项目配置"
+
+    config DIDA_DEV_MODE
+        bool "启用开发默认配置（跳过强制门户配网）"
+        default y
+        help
+            启用后，若 NVS 中缺少 WiFi / 位置配置，会用
+            main/include/device_config_local.h 里的开发默认值**逐字段补齐**，
+            从而跳过强制门户配网，便于反复烧录调试。
+
+            语义是"只填空缺、不覆盖已有值"，所以配过一次网之后它不会再插手。
+
+            需要测试配网流程时，把本项设为 n（或删掉 device_config_local.h）。
+            该头文件被 git 忽略，不会提交。
+
+endmenu

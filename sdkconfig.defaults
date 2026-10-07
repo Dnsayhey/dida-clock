@@ -1,0 +1,104 @@
+# ESP-IDF v6.1 / ESP32-C3 / AirM2M Core / ST7789 240x320
+
+# ---- 目标与时钟 ----
+CONFIG_IDF_TARGET="esp32c3"
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
+CONFIG_FREERTOS_HZ=1000
+
+# ---- Flash：4MB / DIO / 80MHz ----
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# ---- 分区表：自定义，双 OTA 槽 ----
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# ---- 控制台：开发板走 USB Serial/JTAG ----
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# ---- 任务栈 ----
+# main 任务默认只有 3584 字节，但 app_main 要做页面创建，而页面数据源会调用
+# WeatherStore::Snapshot() —— 它**按值返回** WeatherSnapshot，
+# 实测 sizeof(WeatherSnapshot) = 2064 字节。默认栈实测直接 Stack protection fault。
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=10240
+
+# ---- 日志 ----
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# ---- LVGL 9：走 Kconfig 而非 lv_conf.h ----
+CONFIG_LV_CONF_SKIP=y
+CONFIG_LV_COLOR_DEPTH_16=y
+# 关闭 LVGL 自带的示例与演示（省编译时间；注意它们本就不会被链接进固件）
+CONFIG_LV_BUILD_EXAMPLES=n
+CONFIG_LV_BUILD_DEMOS=n
+# 内存/字符串/格式化改用系统实现（CLIB），而不是 LVGL 自带实现。
+# 关键收益：LVGL 自带的 BUILTIN 分配器会在 .bss 里静态占用一个固定大小的内存池
+# （默认 CONFIG_LV_MEM_SIZE_KILOBYTES=64，实测 65536 字节 DRAM）。改用系统堆后
+# 这块刚性占用消失，LVGL 与 WiFi/HTTP/JSON 共享同一堆，在 321KB DRAM 的 C3 上更划算。
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_CLIB_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+# LVGL 必须有一个默认字体兜底，这里用内置的 Montserrat 14。
+#
+# **界面文本一律走 assets 里的自定义字库**（dida_cn_16/28/44、dida_num_22/26/64），
+# 它们覆盖了中文与拉丁混排所需的全部字形。因此不需要启用其它内置字号 ——
+# 启用了也不会被链接（没有引用）。
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_DEFAULT_MONTSERRAT_14=y
+
+# ---- libc 精简：不链接外部 Newlib 编译的库，故不需要该兼容层 ----
+# 依据 IDF 6.0 迁移指南 system.rst。
+# **实测收益仅 64 字节** —— 不要指望它有体积收益，与 esp_stdio 无关；
+# 保留它主要是去掉这层兼容语义。
+CONFIG_LIBC_PICOLIBC_NEWLIB_COMPATIBILITY=n
+
+# ---- LVGL 体积精简（实测：固件已占 OTA 槽 83%，必须腾空间）----
+# 关闭 LVGL 默认主题：默认主题会引用**每一个** widget 类，从而把它们的代码
+# 全部拉进固件（这也是 LVGL 链接后达 ~260KB 的主因）。
+# 本项目有自己的 UiTheme，因此不需要 LVGL 默认主题（默认主题会拉入全部 widget）。
+# 代价：对象不再有默认样式，页面需自行设置。
+CONFIG_LV_USE_THEME_DEFAULT=n
+CONFIG_LV_USE_THEME_SIMPLE=n
+# 只保留本项目真正用到的 widget：文字、图像、（进度）条。
+# 本项目只用到绝对定位的 label 与 image，其余 widget 一律不需要。
+CONFIG_LV_USE_ANIMIMG=n
+CONFIG_LV_USE_ARC=n
+CONFIG_LV_USE_BUTTON=n
+CONFIG_LV_USE_BUTTONMATRIX=n
+CONFIG_LV_USE_CALENDAR=n
+CONFIG_LV_USE_CALENDAR_HEADER_ARROW=n
+CONFIG_LV_USE_CALENDAR_HEADER_DROPDOWN=n
+CONFIG_LV_USE_CANVAS=n
+CONFIG_LV_USE_CHART=n
+CONFIG_LV_USE_CHECKBOX=n
+CONFIG_LV_USE_DROPDOWN=n
+CONFIG_LV_USE_IMAGEBUTTON=n
+CONFIG_LV_USE_KEYBOARD=n
+CONFIG_LV_USE_LED=n
+CONFIG_LV_USE_LIST=n
+CONFIG_LV_USE_MENU=n
+CONFIG_LV_USE_MSGBOX=n
+CONFIG_LV_USE_ROLLER=n
+CONFIG_LV_USE_SCALE=n
+CONFIG_LV_USE_SLIDER=n
+CONFIG_LV_USE_SPAN=n
+CONFIG_LV_USE_SPINBOX=n
+CONFIG_LV_USE_SPINNER=n
+CONFIG_LV_USE_SWITCH=n
+CONFIG_LV_USE_TABLE=n
+CONFIG_LV_USE_TABVIEW=n
+CONFIG_LV_USE_TEXTAREA=n
+CONFIG_LV_USE_TILEVIEW=n
+CONFIG_LV_USE_WIN=n
+CONFIG_LV_USE_OBSERVER=n
+CONFIG_LV_USE_GRID=n
+
+# ---- SNTP：NTP 服务器槽位 ----
+# 候选列表在 main/include/ntp_config.h（可用 ntp_config_local.h 整体替换）。
+# lwIP 只有这么多个服务器槽位，而 sntp_setservername() 对越界索引**静默忽略** ——
+# 所以这个值必须 >= 候选列表长度，代码侧用 static_assert 把它变成编译错误。
+#
+# 默认 1 意味着只有一个候选：它不可达就永远同步不上时间（界面上的日期与时间
+# 一直空白），而设备其余功能看起来完全正常。3 让 lwIP 能在超时/KoD 时自动换台。
+CONFIG_LWIP_SNTP_MAX_SERVERS=3

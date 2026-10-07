@@ -1,0 +1,111 @@
+<!doctype html>
+<!--
+  界面原型模板 —— 以「实时天气页」为例。
+
+  用法：
+    1. 复制本文件到 /tmp/mock/xxx.html
+    2. 改 .screen 里的元素（坐标直接抄 LVGL 代码里的 left/top）
+    3. ./scripts/render_mock.sh /tmp/mock/xxx.html
+    4. 用 read_image 工具看结果
+
+  坐标全部抄自 components/pages/real_time_weather_page.cpp，
+  每行后面标了常量名 —— **改原型时对照常量，不要凭记忆写坐标**。
+
+  约定（为什么这样写）：
+    * 「屏幕」固定 240x320 —— 与 kScreenWidth / kScreenHeight 一致。
+    * 每个元素 position:absolute + left/top —— **直接写 LVGL 的坐标**，
+      不靠 flex。这样原型与代码是 1:1 的，改了哪一行能对上。
+    * 多方案并排放在一个 flex 行里，每个上面一行说明 —— 比较是重点，
+      单看一张图判断不出「A 和 B 哪个好」。
+    * 配色抄 ui_theme.cpp 的值，字号抄页面代码里的 —— **不要凭记忆写**。
+-->
+<html lang="zh-CN"><head><meta charset="utf-8"><style>
+  body { margin: 0; background: #2a2a2a;
+         font-family: 'PingFang SC', 'STHeiti', sans-serif; }
+  .row { display: flex; gap: 24px; padding: 20px; }
+  .col { text-align: center; }
+  .caption { color: #bbb; font-size: 13px; line-height: 1.7; margin-bottom: 8px; }
+  /* 一块屏幕 = 240x320，与设备一致 */
+  .screen { width: 240px; height: 320px; position: relative;
+            overflow: hidden; background: #000; color: #fff; }
+  .screen.light { background: #fff; color: #000; }
+  /* 所有元素都是绝对定位，left/top 直接对应 LVGL 的坐标 */
+  .el { position: absolute; line-height: 1; white-space: nowrap; }
+</style></head><body>
+<div class="row">
+
+  <div class="col">
+    <div class="caption"><b>深色主题</b><br>ui_theme.cpp 的 kDark</div>
+    <div class="screen" id="dark"></div>
+  </div>
+
+  <div class="col">
+    <div class="caption"><b>浅色主题</b><br>ui_theme.cpp 的 kLight</div>
+    <div class="screen light" id="light"></div>
+  </div>
+
+</div>
+<script>
+// 主题色表 —— 抄自 components/pages/ui_theme.cpp，改配色时两边一起改
+const THEME = {
+  dark:  { background:'#000000', text:'#FFFFFF', text_dim:'#888888', accent:'#FF8D00' },
+  light: { background:'#FFFFFF', text:'#000000', text_dim:'#666666', accent:'#B85C00' },
+};
+const WEATHER_RAIN = { dark:'#4A9EFF', light:'#0B63C4' };
+const SECONDS_RED  = { dark:'#FF3B30', light:'#D32F2F' };
+
+function draw(id, mode) {
+  const c = THEME[mode];
+  const screen = document.getElementById(id);
+  // 小工具：加一个绝对定位元素。x/y 就是 LVGL 里的 left/top
+  const el = (text, x, y, css) => {
+    const d = document.createElement('div');
+    d.className = 'el';
+    d.style.cssText = `left:${x}px; top:${y}px; ${css}`;
+    if (text !== undefined) d.textContent = text;
+    screen.appendChild(d);
+    return d;
+  };
+
+  // ── 以下坐标抄自 components/pages/real_time_weather_page.cpp ──
+  // kDateY=28, 居中占满 kScreenWidth, 字号 = kFontBody 的 16px
+  el('10月07日  周二', 0, 28,
+     `width:240px; text-align:center; font-size:16px; color:${c.text}`);
+
+  // 时间：64px，kTimeX=8，kTimeY=66。**数字是等宽的**（见 gen_fonts.py 的
+  // make_tabular）—— 所以任何时刻的宽度都恒为 187px，秒的位置不用跟着变。
+  const t = el('', 8, 80, `font-size:64px; color:${c.text}`);
+  t.innerHTML = `14<span style="color:${c.accent}">:</span>26`;
+
+  // kSecondsX = kTimeX + 187 + 8 = 203；22px 等宽，两位 30px，右边缘 233/240
+  el('37', 203, 80, `font-size:22px; color:${SECONDS_RED[mode]}`);
+
+  el('', 14, 160, `width:212px; height:1px; background:${c.text}`);  // kDividerX/Y/W
+
+  el('东风 4级 · 体感 25℃ · 能见度 25km', 14, 174,  // kDividerX, kTickerY
+     `width:212px; overflow:hidden; font-size:16px; color:${c.text_dim}`);
+
+  // kWeatherX=14, kBlockTop=214, 宽度 0 = 自适应（不是右对齐）。
+  // 温度在 kTemperatureX=72, kBlockTop+8=222 —— 两者都在左侧信息块里。
+  el('雨', 14, 214, `font-size:44px; color:${WEATHER_RAIN[mode]}`);
+  el('22℃', 72, 222, `font-size:26px; color:${c.accent}`);
+
+  // kBlockTop+48 = 262
+  el('小雨', 16, 262, `font-size:16px; color:${c.text_dim}`);   // kTextX
+  el('杭州', 74, 262, `font-size:16px; color:${c.text}`);       // kCityX, 槽宽 kTextSlotWidth=48
+
+  // AQI 徽章：38x21 圆角块，底色按空气质量
+  el('优', 126, 261,  // kBadgeX, kBlockTop+47；尺寸 kBadgeW x kBadgeH = 38x21
+     `width:38px; height:21px; border-radius:5px; background:#1E7A34; color:#fff;
+      font-size:15px; display:flex; align-items:center; justify-content:center;`);
+
+  // 太空人：56x56。原型里用色块占位 —— 引用不存在的图片会渲染成破图，
+  // 反而干扰对版面的判断（实机上这里是 A1 掩码 + recolor）。
+  // kAstroX=176, kAstroY=(214+282)/2-28=220, 尺寸 56x56
+  el('', 176, 220,
+     `width:56px; height:56px; border:1px dashed ${c.text_dim}; border-radius:50%;`);
+}
+
+draw('dark', 'dark');
+draw('light', 'light');
+</script></body></html>

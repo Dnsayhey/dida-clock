@@ -1,0 +1,13 @@
+# Name,   Type, SubType, Offset,   Size,     Flags
+# 4MB flash，无 factory 分区。双 OTA 槽各 1.75MB；
+# 当前固件占 83%，余量约 307KB。
+#
+# **槽位大小必须在第一台设备启用 OTA 之前定死。**
+# 分区表固定在偏移 0x8000，OTA 更新不了它 —— **改这里只能 `idf.py flash -a` 全量烧录**。
+# 一旦有设备已经在用 OTA，再改就得每台接 USB 重刷一次。
+# 末尾另有 448KB 未分配（0x3F0000 之后），需要加大槽位时用。
+nvs,      data, nvs,     0x9000,   0x4000,
+otadata,  data, ota,     0xd000,   0x2000,
+phy_init, data, phy,     0xf000,   0x1000,
+ota_0,    app,  ota_0,   0x10000,  0x1C0000,
+ota_1,    app,  ota_1,   0x1D0000, 0x1C0000,

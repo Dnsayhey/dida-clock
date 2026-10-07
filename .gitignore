@@ -1,0 +1,22 @@
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+*.bin
+*.elf
+*.map
+
+# 本地密钥与开发配置 —— 绝不提交（明文密钥一旦进入版本历史就永久留存）
+main/include/device_config_local.h
+main/include/weather_config_local.h
+main/include/time_config_local.h
+
+# macOS 元数据
+.DS_Store
+._*
+.AppleDouble
+
+# Python 工具脚本的字节码缓存
+__pycache__/
+*.pyc

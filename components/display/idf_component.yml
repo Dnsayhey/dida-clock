@@ -1,0 +1,7 @@
+dependencies:
+  idf: ">=5.5"
+  # 与 ESP-IDF 官方 spi_lcd_touch 示例保持一致的 LVGL 版本
+  lvgl/lvgl: "9.3.0"
+  # LVGL 移植层：自建任务 + tick + 线程安全锁。
+  # 不用 esp_lvgl_adapter：它强制引入 FreeType 等 3 个公有依赖
+  espressif/esp_lvgl_port: "^2.9.0"
