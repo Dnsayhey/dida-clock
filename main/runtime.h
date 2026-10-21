@@ -73,8 +73,9 @@ extern storage::NvsConfigStore g_config_store;
 extern portal::CaptivePortal g_portal;
 
 // 跨任务共享的三个标量：
-//   * g_brightness_mode / g_theme_mode —— UI 任务改，启动任务的自适应任务读
-//   * g_ambient_brightness             —— 启动任务写，UI 任务读（驱动自动亮度）
+//   * g_brightness_mode —— UI 任务改，启动任务的自适应任务读
+//   * g_theme_mode      —— UI 任务改，UI 主题检查定时器读（启动期 app_main 读一次）
+//   * g_ambient_brightness —— 启动任务写，UI 任务读（自动亮度 + 自动主题兜底）
 // 标量用 atomic 即可满足 CONVENTIONS §5（不得有未保护的跨任务可变状态）。
 extern std::atomic<int> g_brightness_mode;
 extern std::atomic<int> g_theme_mode;
