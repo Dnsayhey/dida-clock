@@ -51,8 +51,8 @@ void HandleNoContent(httpd_req_t* req) {
   httpd_resp_send(req, nullptr, 0);
 }
 
-// 整块读出表单体。**只能调一次** —— httpd_req_recv() 会消费请求体，
-// 之后再调只拿到 0 字节。所有字段都从这一个 string 里解析。
+// 整块读出表单体。httpd_req_recv() 可能只返回一部分（TCP 分片），
+// 必须循环读到 Content-Length 为止；所有字段都从这一个 string 里解析。
 std::string ReadFormBody(httpd_req_t* req) {
   char length_header[16] = {};
   if (httpd_req_get_hdr_value_str(req, "Content-Length", length_header,
@@ -64,11 +64,19 @@ std::string ReadFormBody(httpd_req_t* req) {
     return {};
   }
   std::string body(static_cast<std::size_t>(content_length), '\0');
-  const int received = httpd_req_recv(req, body.data(), content_length);
-  if (received <= 0) {
-    return {};
+  std::size_t received = 0;
+  while (received < body.size()) {
+    const int n =
+        httpd_req_recv(req, body.data() + received, body.size() - received);
+    if (n == HTTPD_SOCK_ERR_TIMEOUT) {
+      return {};  // 不在 httpd 任务里无限重试；让客户端重发表单
+    }
+    if (n <= 0) {
+      return {};
+    }
+    received += static_cast<std::size_t>(n);
   }
-  body.resize(static_cast<std::size_t>(received));
+  body.resize(received);
   return body;
 }
 

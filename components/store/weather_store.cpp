@@ -3,12 +3,6 @@
 #include <utility>
 
 namespace store {
-namespace {
-
-// 一次快照拷贝的全部字段。集中在这里，避免将来加字段时漏掉某一处。
-void CopyInto(WeatherSnapshot& dst, const WeatherSnapshot& src) { dst = src; }
-
-}  // namespace
 
 weather::SyncState& WeatherStore::StateLocked(weather::DataSource source) {
   switch (source) {
@@ -80,9 +74,7 @@ void WeatherStore::MarkFailed(weather::DataSource source, std::string message,
 
 WeatherSnapshot WeatherStore::Snapshot() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  WeatherSnapshot copy;
-  CopyInto(copy, data_);
-  return copy;  // 在锁内完成拷贝，出锁后调用方独占
+  return data_;  // 在锁内完成拷贝，出锁后调用方独占
 }
 
 uint32_t WeatherStore::Sequence() const {

@@ -86,7 +86,7 @@ struct WeatherPageViewData {
   // 用 " · " 分隔 —— 中点比逗号更像"信息流"，扫读时也更省力。
   std::string ticker;
 
-  std::string city;              // "杭州"（adm2，地级市）
+  std::string city;  // "萧山"（搜索命中的 name；回退 adm2/配置地名）
   std::string weather_category;  // "雨"（9 类之一；官方表外的代码为空串）
   std::string weather_text;      // "中到大雨"（官方 text，完整，不截断）
   std::string temperature;       // "22℃"

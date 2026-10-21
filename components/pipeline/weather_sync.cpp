@@ -120,12 +120,12 @@ bool WeatherSync::EnsureLocation(const config::DeviceConfig& device_config) {
 void WeatherSync::SyncCurrentConditions(const std::string& location_id) {
   if (!api_config_.IsConfigured()) {
     store_.MarkFailed(weather::DataSource::kCurrentConditions,
-                      "Weather API not configured", 0);
+                      "Weather API not configured", NowMs());
     return;
   }
   if (location_id.empty()) {
     store_.MarkFailed(weather::DataSource::kCurrentConditions,
-                      "Missing location id", 0);
+                      "Missing location id", NowMs());
     return;
   }
 

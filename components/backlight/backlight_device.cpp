@@ -13,7 +13,6 @@ constexpr ledc_mode_t kSpeedMode = LEDC_LOW_SPEED_MODE;
 constexpr ledc_timer_t kTimer = LEDC_TIMER_0;
 constexpr ledc_channel_t kChannel = LEDC_CHANNEL_0;
 
-ledc_channel_config_t g_channel = {};
 }  // namespace
 
 bool BacklightDevice::Begin(gpio_num_t pin) {
@@ -41,7 +40,6 @@ bool BacklightDevice::Begin(gpio_num_t pin) {
     ESP_LOGE(kTag, "ledc_channel_config 失败: %s", esp_err_to_name(err));
     return false;
   }
-  g_channel = channel_cfg;
 
   initialized_ = true;
   ESP_LOGI(kTag, "背光就绪: %d Hz / %d 位 / GPIO %d", kPwmFreqHz,

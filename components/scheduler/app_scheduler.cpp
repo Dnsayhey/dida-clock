@@ -49,9 +49,8 @@ bool AppScheduler::Add(const std::string& name, uint32_t interval_ms,
     task.last_run_ms = now;
   }
 
-  // 先预留再插入，避免回调（上面 run_now 分支）与本次插入交错时
-  // 出现引用失效 —— 虽然封存前是单线程，这里仍保持保守写法。
-  tasks_.reserve(tasks_.size() + 1);
+  // 交给 vector 自己按几何增长；按 size+1 精确 reserve 会在每次 Add 时
+  // 重新分配，反而把启动期 O(n) 的注册变成 O(n²)。
   tasks_.push_back(std::move(task));
   return true;
 }

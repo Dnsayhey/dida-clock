@@ -8,6 +8,7 @@
 #include <freertos/event_groups.h>
 
 #include <cstring>
+#include <mutex>
 
 #include "net/network_status.h"
 #include "net/wifi_driver.h"
@@ -23,7 +24,9 @@ constexpr int kFailedBit = BIT1;
 EventGroupHandle_t g_events = nullptr;
 esp_netif_t* g_sta_netif = nullptr;
 
-// 当前连接配置。仅由 net 任务写，配合 PublishNetworkStatus 一起发布。
+// 当前连接配置。Connect() 在 net 任务写，OnWifiEvent() 在 esp_event 任务读，
+// 因此必须用锁保护 —— 这正是 NetworkStatus 存在的理由，g_ssid 不能绕过它。
+std::mutex g_ssid_mutex;
 std::string g_ssid;
 
 // 从 netif 读取 IP 字符串
@@ -82,7 +85,10 @@ void OnWifiEvent(void* /*arg*/, esp_event_base_t base, int32_t id,
     NetworkStatus online;
     online.connected = true;
     online.ip = ReadIpString();
-    online.ssid = g_ssid;
+    {
+      std::lock_guard<std::mutex> lock(g_ssid_mutex);
+      online.ssid = g_ssid;
+    }
     online.rssi = ReadRssi();
     PublishNetworkStatus(online);
 
@@ -160,7 +166,10 @@ bool WifiStation::Connect(const std::string& ssid, const std::string& password,
     ESP_LOGE(kTag, "SSID 或密码过长");
     return false;
   }
-  g_ssid = ssid;
+  {
+    std::lock_guard<std::mutex> lock(g_ssid_mutex);
+    g_ssid = ssid;
+  }
   std::memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid.size());
   std::memcpy(wifi_config.sta.password, password.c_str(), password.size());
   wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;

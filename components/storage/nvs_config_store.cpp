@@ -16,7 +16,7 @@ constexpr char kTag[] = "nvs_config";
 // 一次 NVS 会话：构造时打开命名空间，析构时关闭。
 class NvsSession {
  public:
-  explicit NvsSession(bool read_only) : read_only_(read_only) {
+  explicit NvsSession(bool read_only) {
     // 命名空间不存在时，READWRITE 打开会创建它。
     // 这样整片 flash 被擦除后（命名空间不存在）也能正常工作。
     result_ = nvs_open(config::kNvsNamespace,
@@ -37,7 +37,6 @@ class NvsSession {
   nvs_handle_t handle() const { return handle_; }
 
  private:
-  bool read_only_;
   nvs_handle_t handle_ = 0;
   esp_err_t result_ = ESP_FAIL;
 };
@@ -66,15 +65,16 @@ int ReadInt(nvs_handle_t handle, const char* key, int fallback) {
   return static_cast<int>(value);
 }
 
-void WriteString(nvs_handle_t handle, const char* key,
-                 const std::string& value) {
+esp_err_t WriteString(nvs_handle_t handle, const char* key,
+                      const std::string& value) {
   if (value.empty()) {
     // 空值一律走 erase，而不是写空串：让"键不存在"成为"未配置"的唯一表示，
     // 读侧不必再去区分"存在但为空"和"不存在"两种状态。
-    nvs_erase_key(handle, key);
-    return;
+    const esp_err_t err = nvs_erase_key(handle, key);
+    // 键本来就不存在不算失败。
+    return err == ESP_ERR_NVS_NOT_FOUND ? ESP_OK : err;
   }
-  nvs_set_str(handle, key, value.c_str());
+  return nvs_set_str(handle, key, value.c_str());
 }
 
 }  // namespace
@@ -126,17 +126,40 @@ esp_err_t NvsConfigStore::Save(const config::DeviceConfig& input) {
   }
 
   const nvs_handle_t handle = session.handle();
-  WriteString(handle, config::kKeyWifiSsid, normalized.wifi_ssid);
-  WriteString(handle, config::kKeyWifiPassword, normalized.wifi_password);
-  WriteString(handle, config::kKeyAdm, normalized.adm);
-  WriteString(handle, config::kKeyLocation, normalized.location);
-  WriteString(handle, config::kKeyLocationId, normalized.location_id);
-  WriteString(handle, config::kKeyLocationLat, normalized.location_lat);
-  WriteString(handle, config::kKeyLocationLon, normalized.location_lon);
-  nvs_set_i32(handle, config::kKeyBacklightMode, normalized.backlight_mode);
-  nvs_set_i32(handle, config::kKeyThemeMode, normalized.theme_mode);
+  struct StringField {
+    const char* key;
+    const std::string* value;
+  };
+  const StringField fields[] = {
+      {config::kKeyWifiSsid, &normalized.wifi_ssid},
+      {config::kKeyWifiPassword, &normalized.wifi_password},
+      {config::kKeyAdm, &normalized.adm},
+      {config::kKeyLocation, &normalized.location},
+      {config::kKeyLocationId, &normalized.location_id},
+      {config::kKeyLocationLat, &normalized.location_lat},
+      {config::kKeyLocationLon, &normalized.location_lon},
+  };
+  for (const StringField& field : fields) {
+    const esp_err_t err = WriteString(handle, field.key, *field.value);
+    if (err != ESP_OK) {
+      ESP_LOGE(kTag, "写入 %s 失败: %s", field.key, esp_err_to_name(err));
+      return err;
+    }
+  }
 
-  const esp_err_t err = nvs_commit(handle);
+  esp_err_t err =
+      nvs_set_i32(handle, config::kKeyBacklightMode, normalized.backlight_mode);
+  if (err != ESP_OK) {
+    ESP_LOGE(kTag, "写入亮度档位失败: %s", esp_err_to_name(err));
+    return err;
+  }
+  err = nvs_set_i32(handle, config::kKeyThemeMode, normalized.theme_mode);
+  if (err != ESP_OK) {
+    ESP_LOGE(kTag, "写入主题档位失败: %s", esp_err_to_name(err));
+    return err;
+  }
+
+  err = nvs_commit(handle);
   if (err != ESP_OK) {
     ESP_LOGE(kTag, "nvs_commit 失败: %s", esp_err_to_name(err));
   }
@@ -148,7 +171,12 @@ esp_err_t NvsConfigStore::SaveBrightnessMode(int mode) {
   if (!session.Ok()) {
     return session.Result();
   }
-  nvs_set_i32(session.handle(), config::kKeyBacklightMode, mode);
+  const esp_err_t err =
+      nvs_set_i32(session.handle(), config::kKeyBacklightMode, mode);
+  if (err != ESP_OK) {
+    ESP_LOGE(kTag, "写入亮度档位失败: %s", esp_err_to_name(err));
+    return err;
+  }
   return nvs_commit(session.handle());
 }
 
@@ -157,7 +185,12 @@ esp_err_t NvsConfigStore::SaveThemeMode(int mode) {
   if (!session.Ok()) {
     return session.Result();
   }
-  nvs_set_i32(session.handle(), config::kKeyThemeMode, mode);
+  const esp_err_t err =
+      nvs_set_i32(session.handle(), config::kKeyThemeMode, mode);
+  if (err != ESP_OK) {
+    ESP_LOGE(kTag, "写入主题档位失败: %s", esp_err_to_name(err));
+    return err;
+  }
   return nvs_commit(session.handle());
 }
 

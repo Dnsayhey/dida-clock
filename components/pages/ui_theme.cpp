@@ -35,7 +35,7 @@ constexpr uint32_t kBadgeTextColor = 0xFFFFFF;
 
 // 天气文字色。深色主题用亮版、浅色主题用暗版，两版都按对比度 ≥4.5 挑选。
 //
-// 匹配用**完整前缀**而不是首字节：UTF-8 里"晴"和"沙"的首字节都是 0xE6，
+// 匹配用**完整串**而不是首字节：UTF-8 里"晴"和"沙"的首字节都是 0xE6，
 // 只看首字节会把它们混为一谈。
 struct WeatherColorEntry {
   const char* name;
@@ -44,16 +44,17 @@ struct WeatherColorEntry {
 };
 
 // 9 类与 weather::WeatherCategoryName() 一一对应。
+// 这里必须用分类名（云/雹/沙），不能用完整天气名（多云/冰雹/沙尘）。
 constexpr std::array<WeatherColorEntry, 9> kWeatherColors = {{
     {"晴", 0xFF8D00, 0xB85C00},  // 暖橙
-    {"多云", 0xA8B8CC, 0x4A5A70},
+    {"云", 0xA8B8CC, 0x4A5A70},
     {"阴", 0xA8B8CC, 0x4A5A70},
     {"雨", 0x4A9EFF, 0x1D5FB8},
     {"雷", 0xFFB020, 0x8A5A00},
-    {"冰雹", 0x22D3EE, 0x0E7490},
+    {"雹", 0x22D3EE, 0x0E7490},
     {"雪", 0x22D3EE, 0x0E7490},
     {"雾", 0xB0B0B0, 0x5A5A5A},
-    {"沙尘", 0xD2A679, 0x7A5A32},
+    {"沙", 0xD2A679, 0x7A5A32},
 }};
 
 // 空气质量徽章底色。白字压在上面，所以全部取暗色；
