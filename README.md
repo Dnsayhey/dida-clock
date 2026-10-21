@@ -8,6 +8,7 @@
 |---|---|
 | [CONVENTIONS.md](CONVENTIONS.md) | 代码规范与架构约定（分层、线程契约、注释、测试、界面、定时器）—— **改代码前先读** |
 | [tests/host/README.md](tests/host/README.md) | 主机单测的方法学与实测结果（含并发自证程序） |
+| [docs/硬件说明.md](docs/硬件说明.md) | 板子、屏幕、按键、光敏、背光改造的硬件事实与接线 |
 | [docs/和风天气接口实测.md](docs/和风天气接口实测.md) | 和风天气各端点的真实请求与响应样本 |
 | [docs/界面原型渲染流程.md](docs/界面原型渲染流程.md) | 改界面前先画 HTML 原型、渲染成图再动代码 |
 
@@ -42,7 +43,8 @@
 ## 硬件与引脚
 
 以 [`components/board/include/board/board_config.h`](components/board/include/board/board_config.h)
-为准（改板子时先改那里）：
+为准（改板子时先改那里）。完整的屏幕 FPC 定义、背光 NMOS 改造和板型差异见
+[docs/硬件说明.md](docs/硬件说明.md)。
 
 | 功能 | GPIO |
 |---|---|
