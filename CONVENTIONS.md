@@ -482,7 +482,7 @@ WeatherStore store = MakeReadyStore();   // ✗ 需要拷贝/移动
 | 自定义 gzip 头解析 | `tinfl` 不支持 gzip 容器 |
 | 关闭 LVGL 默认主题 | 它会引用每个 widget 类，拉入全部 widget 代码（省 91.6 KB） |
 | LVGL 用 CLIB 内存实现 | 自带分配器静态占 64 KB DRAM |
-| 双 OTA 槽各 1.75 MB | 4 MB flash 下不让 `factory` 分区参与 |
+| 双 OTA 槽各 1.94 MB | 4 MB flash 下不让 `factory` 分区参与；槽大小按 64KB 对齐，两个等大槽最大只能到 `0x1F0000`，末尾余 64KB；槽大小必须在首台设备启用 OTA 前定死 |
 | 数据流水线独立成 `pipeline` 组件 | `namespace sync` 与 POSIX `sync()` 冲突（同 `system` → `scheduler`） |
 | 界面字体用 LVGL 内置 Montserrat 16 | 它没有本项目需要的汉字；且英文比中文宽，20 号下长文案会超屏宽 |
 | 所有 API 请求带 `lang=zh` | 界面是中文；不带这个参数会拿到英文，本地还得再翻译一层 |

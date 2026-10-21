@@ -53,7 +53,7 @@ CONFIG_LV_FONT_DEFAULT_MONTSERRAT_14=y
 # 保留它主要是去掉这层兼容语义。
 CONFIG_LIBC_PICOLIBC_NEWLIB_COMPATIBILITY=n
 
-# ---- LVGL 体积精简（实测：固件已占 OTA 槽 83%，必须腾空间）----
+# ---- LVGL 体积精简（历史：早期固件占 1.75MB 槽 83%，当时必须腾空间）----
 # 关闭 LVGL 默认主题：默认主题会引用**每一个** widget 类，从而把它们的代码
 # 全部拉进固件（这也是 LVGL 链接后达 ~260KB 的主因）。
 # 本项目有自己的 UiTheme，因此不需要 LVGL 默认主题（默认主题会拉入全部 widget）。
