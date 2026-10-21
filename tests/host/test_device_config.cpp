@@ -95,27 +95,34 @@ TEST_CASE(Normalize_档位越界被夹取) {
 
   const DeviceConfig n = config::Normalize(c);
   CHECK_EQ(n.backlight_mode, 3);  // 亮度是 4 档
-  CHECK_EQ(n.theme_mode, 0);      // 主题是 2 档，负值夹到深色
+  CHECK_EQ(n.theme_mode, 0);      // 主题是 3 档，负值夹到浅色
 }
 
-// 主题只有两档，上限必须是 1：曾经与亮度共用"上限 3"，于是 2/3 这种不存在的
-// 主题值能存进 NVS（屏幕上按深色显示、设置页显示"未知"）。
-TEST_CASE(Normalize_主题越界夹到两档以内) {
+// 主题现在有三档（0=浅色 1=深色 2=自动），上限必须是 2：曾经与亮度共用
+// "上限 3"，于是 3 这种不存在的主题值也能存进 NVS（屏幕上按深色显示、
+// 设置页显示"未知"）。而 2 现在是**合法值**，不能再被夹到 1。
+TEST_CASE(Normalize_主题越界夹到三档以内) {
   DeviceConfig c = MakeConfig();
-  c.theme_mode = 3;
-  CHECK_EQ(config::Normalize(c).theme_mode, 1);
+  c.theme_mode = 9;
+  CHECK_EQ(config::Normalize(c).theme_mode, 2);
 
-  c.theme_mode = 2;
-  CHECK_EQ(config::Normalize(c).theme_mode, 1);
+  c.theme_mode = 3;  // 超出三档
+  CHECK_EQ(config::Normalize(c).theme_mode, 2);
 
-  c.theme_mode = 1;  // 合法值不动
+  c.theme_mode = 2;  // 自动：合法，必须原样保留
+  CHECK_EQ(config::Normalize(c).theme_mode, 2);
+
+  c.theme_mode = 1;
   CHECK_EQ(config::Normalize(c).theme_mode, 1);
 }
 
 // 默认主题是**浅色**：这个值决定 NVS 里没有 theme 键时新设备开机显示什么。
+// 选浅色而不是"自动"是有意的：默认给一个确定、不随环境变化的行为，想跟随
+// 日出日落再自己按一下。（"自动"本身在未配网时也能工作 —— 见 auto_theme.h
+// 的降级链 —— 只是没必要把它当开箱默认。）
 TEST_CASE(DeviceConfig_默认主题是浅色) {
   const DeviceConfig fresh;
-  CHECK_EQ(fresh.theme_mode, 1);
+  CHECK_EQ(fresh.theme_mode, 0);
   CHECK_EQ(fresh.backlight_mode, 0);  // 亮度默认 AUTO，不受影响
 }
 

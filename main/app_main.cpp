@@ -87,11 +87,9 @@ extern "C" void app_main(void) {
     ESP_LOGW(kTag, "光敏初始化失败，AUTO 档将退回固定值");
   }
 
-  // 从 NVS 恢复设置（档位与主题），并设定全局主题状态
+  // 从 NVS 恢复设置（档位与主题）
   dida::g_brightness_mode.store(dida::g_device_config.backlight_mode);
   dida::g_theme_mode.store(dida::g_device_config.theme_mode);
-  pages::SetCurrentTheme(
-      static_cast<app::ThemeMode>(dida::g_theme_mode.load()));
 
   // 启动时先读一次环境光并应用，避免等启动任务起来才点亮屏幕
   {
@@ -101,6 +99,12 @@ extern "C" void app_main(void) {
     }
     dida::ApplyBacklight();
   }
+
+  // 主题设置可能是"自动"（跟日出日落）。此刻还没联网、天气数据也在内存里
+  // 尚未同步，所以通常会落到"环境光"或固定表那一层；周期检查会在数据到位
+  // 后自行修正。放在这里而不是前面，是为了让环境光那一层用上真实读数。
+  pages::SetCurrentTheme(dida::ResolveThemeSetting());
+
   ESP_LOGI(kTag, "设置已恢复: 亮度 %s / 主题 %s",
            backlight::BrightnessModeName(static_cast<backlight::BrightnessMode>(
                dida::g_brightness_mode.load())),
@@ -124,6 +128,7 @@ extern "C" void app_main(void) {
       ESP_LOGE(kTag, "初始页未注册，页面系统未就绪");
     }
     dida::StartButtonPolling();
+    dida::StartThemeCheck();
     dida::g_display.Unlock();
     ESP_LOGI(kTag, "页面系统就绪：已注册 %u 页",
              static_cast<unsigned>(dida::g_page_manager->RegisteredCount()));

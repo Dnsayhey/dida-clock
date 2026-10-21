@@ -38,7 +38,7 @@ class Page {
   // 原始按键事件，只处理已经过应用层决策的语义动作。
   //
   // 只有需要页内交互的页面才覆写：
-  //   亮度与主题页：OnClick 切亮度档位、OnLongPress 切浅色/深色
+  //   亮度与主题页：OnClick 切亮度档位、OnLongPress 切主题（浅色/深色/自动）
   //   恢复出厂页：OnLongPress 清 NVS 并重启
   virtual void OnClick() {}
   virtual void OnLongPress() {}

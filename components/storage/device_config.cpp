@@ -7,10 +7,10 @@ namespace config {
 namespace {
 
 // 档位上限。两者**不能共用一个数**：背光是 4 档（AUTO / LEVEL_1..3），
-// 主题只有 2 档（0=深色 1=浅色，见 app::ThemeMode）—— 共用会让 2/3 这种
-// 不存在的主题值存进 NVS（屏幕上按深色显示、设置页显示"未知"）。
+// 主题是 3 档（0=浅色 1=深色 2=自动，见 app::ThemeMode）—— 共用会让
+// 不存在的值存进 NVS（屏幕上按深色显示、设置页显示"未知"）。
 constexpr int kMaxBrightnessMode = 3;
-constexpr int kMaxThemeMode = 1;
+constexpr int kMaxThemeMode = 2;
 
 int ClampTo(int value, int max_value) {
   if (value < 0) {

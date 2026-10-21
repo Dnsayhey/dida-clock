@@ -110,16 +110,23 @@ TEST_CASE(Settings_主题文案) {
   CHECK_EQ(light.theme, std::string("浅色"));
 }
 
-TEST_CASE(Settings_主题切换是二值往返) {
-  CHECK(app::NextThemeMode(app::ThemeMode::kDark) == app::ThemeMode::kLight);
+TEST_CASE(Settings_主题是三态循环) {
+  // 浅色 → 深色 → 自动 → 浅色。默认档排第一（按一下就是"想变暗"这个最常见
+  // 的诉求），自动放最后（不会一不小心切进去）。
   CHECK(app::NextThemeMode(app::ThemeMode::kLight) == app::ThemeMode::kDark);
+  CHECK(app::NextThemeMode(app::ThemeMode::kDark) == app::ThemeMode::kAuto);
+  CHECK(app::NextThemeMode(app::ThemeMode::kAuto) == app::ThemeMode::kLight);
 }
 
-TEST_CASE(Settings_主题切换往返回到原值) {
-  const app::ThemeMode start = app::ThemeMode::kDark;
-  const app::ThemeMode once = app::NextThemeMode(start);
-  const app::ThemeMode twice = app::NextThemeMode(once);
-  CHECK(twice == start);
+TEST_CASE(Settings_主题切换三次回到原值) {
+  for (const app::ThemeMode start :
+       {app::ThemeMode::kLight, app::ThemeMode::kDark, app::ThemeMode::kAuto}) {
+    app::ThemeMode mode = start;
+    for (int i = 0; i < 3; ++i) {
+      mode = app::NextThemeMode(mode);
+    }
+    CHECK(mode == start);
+  }
 }
 
 // 自动档**绝不能把屏幕点到全黑**。

@@ -34,9 +34,9 @@ struct DeviceConfig {
   std::string location_lat;
   std::string location_lon;
   int backlight_mode = 0;
-  // 编码与 app::ThemeMode 一致（0=深色 1=浅色），默认浅色。
+  // 编码与 app::ThemeMode 一致（0=浅色 1=深色 2=自动），默认"浅色"。
   // NVS 里没有这个键时用的就是这里的值 —— 改它等于改"新设备开机显示什么"。
-  int theme_mode = 1;
+  int theme_mode = 0;
 };
 
 // 去掉首尾空白。用户在网页表单里很容易带进空格。

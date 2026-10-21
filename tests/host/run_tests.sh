@@ -57,6 +57,7 @@ SOURCES=(
   "${PROJECT_ROOT}/components/app/app_events.cpp"
   "${PROJECT_ROOT}/components/app/page_type.cpp"
   "${PROJECT_ROOT}/components/app/settings_view_data.cpp"
+  "${PROJECT_ROOT}/components/app/auto_theme.cpp"
   "${PROJECT_ROOT}/components/app/weather_view_data.cpp"
   "${PROJECT_ROOT}/components/app/runtime_status.cpp"
   "${PROJECT_ROOT}/components/backlight/backlight_policy.cpp"
@@ -83,6 +84,7 @@ TESTS=(
   "${SCRIPT_DIR}/test_portal.cpp"
   "${SCRIPT_DIR}/test_weather_view_data.cpp"
   "${SCRIPT_DIR}/test_time_zone.cpp"
+  "${SCRIPT_DIR}/test_auto_theme.cpp"
 )
 
 mkdir -p "${BUILD_DIR}"

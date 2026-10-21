@@ -4,6 +4,7 @@ idf_component_register(
         "app_controller.cpp"
         "app_command_executor.cpp"
         "app_events.cpp"
+        "auto_theme.cpp"
         "page_type.cpp"
         "settings_view_data.cpp"
         "weather_view_data.cpp"

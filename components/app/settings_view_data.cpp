@@ -8,6 +8,10 @@ const char* ThemeModeName(ThemeMode mode) {
       return "深色";
     case ThemeMode::kLight:
       return "浅色";
+    case ThemeMode::kAuto:
+      return "自动";
+    case ThemeMode::kCount:
+      break;
   }
   return "未知";
 }
@@ -46,7 +50,20 @@ backlight::BrightnessMode NextBrightnessMode(
 }
 
 ThemeMode NextThemeMode(ThemeMode current) {
-  return current == ThemeMode::kDark ? ThemeMode::kLight : ThemeMode::kDark;
+  // 按键循环顺序是产品语义，与 enum 的数值（NVS 编码）解耦。
+  // 默认档（浅色）排第一，于是"按一下"落在最常见的诉求上（想要更暗）；
+  // 自动放在最后，不会一不小心切进去。
+  switch (current) {
+    case ThemeMode::kLight:
+      return ThemeMode::kDark;
+    case ThemeMode::kDark:
+      return ThemeMode::kAuto;
+    case ThemeMode::kAuto:
+      return ThemeMode::kLight;
+    case ThemeMode::kCount:
+      break;
+  }
+  return ThemeMode::kLight;
 }
 
 }  // namespace app

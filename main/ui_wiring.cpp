@@ -4,6 +4,7 @@
 #include <esp_log.h>
 #include <esp_system.h>
 
+#include "app/auto_theme.h"
 #include "backlight/backlight_policy.h"
 #include "net/network_status.h"
 #include "net/sntp.h"
@@ -95,17 +96,90 @@ void CycleBrightness() {
   g_page_manager->RefreshCurrent();
 }
 
-// 长按：切换浅色/深色主题
+// 长按：切换主题（浅色 → 深色 → 自动）
 void ToggleTheme() {
   const app::ThemeMode next =
       app::NextThemeMode(static_cast<app::ThemeMode>(g_theme_mode.load()));
   g_theme_mode.store(static_cast<int>(next));
   g_config_store.SaveThemeMode(static_cast<int>(next));
 
-  // 对所有页面生效（包括隐藏中的），否则切回隐藏过的页面会看到旧配色
-  g_page_manager->ApplyTheme(next);
+  // 解析并应用（"自动"要现算），对所有页面生效（包括隐藏中的），
+  // 否则切回隐藏过的页面会看到旧配色
+  ApplyThemeFromSetting();
+  // 档位名本身也变了：即便解析出的主题与当前一致（例如夜里从"深色"切到
+  // "自动"，两者都解析成深色），设置页那栏也得跟着显示新档位。
   g_page_manager->RefreshCurrent();
-  ESP_LOGI(kTag, "主题 -> %s", app::ThemeModeName(next));
+  ESP_LOGI(kTag, "主题设置 -> %s", app::ThemeModeName(next));
+}
+
+namespace {
+
+// "自动"档的输入：现在的本地时间、今天的日出日落、当前环境光。
+app::AutoThemeInput BuildAutoThemeInput() {
+  app::AutoThemeInput in;
+  in.ambient_brightness = g_ambient_brightness.load();
+  if (!net::IsTimeSynced()) {
+    return in;  // 时间不可用：只带 ambient，走环境光
+  }
+
+  const net::LocalClockReading clock = net::ReadLocalClock();
+  const auto now = app::ParseHhMm(clock.time);
+  if (!now.has_value()) {
+    return in;  // 时间格式异常：同样退到环境光，不把 00:00 当成真实时间
+  }
+  in.now_minutes = *now;
+
+  // 先找"今天"那一行；找不到就退回数组第一项（= 上次同步那天）。
+  // 日出日落每天只漂移约 1 分钟，所以即便数据过期几天，也比固定表准。
+  const store::WeatherSnapshot snapshot = g_weather_store.Snapshot();
+  const weather::WeatherDaily* row = nullptr;
+  for (const weather::WeatherDaily& day : snapshot.daily) {
+    if (!day.fxDate.empty() && day.fxDate == clock.date) {
+      row = &day;
+      break;
+    }
+  }
+  if (row == nullptr && !snapshot.daily[0].fxDate.empty()) {
+    row = &snapshot.daily[0];
+  }
+  if (row != nullptr) {
+    in.sunrise_minutes = app::ParseHhMm(row->sunrise);
+    in.sunset_minutes = app::ParseHhMm(row->sunset);
+  }
+  return in;
+}
+
+// 自动档的复查周期。主题每分钟看一次够用（日出日落是分钟级的事），
+// 而且它跑在 LVGL 任务里、与 1Hz 时钟和 10ms 按键是两个独立定时器 ——
+// 不要把它们合并（CONVENTIONS §18.1）。
+constexpr uint32_t kThemeCheckMs = 60 * 1000;
+
+void ThemeCheckTimer(lv_timer_t* /*timer*/) { ApplyThemeFromSetting(); }
+
+}  // namespace
+
+app::ThemeMode ResolveThemeSetting() {
+  const auto setting = static_cast<app::ThemeMode>(g_theme_mode.load());
+  if (setting != app::ThemeMode::kAuto) {
+    return setting;
+  }
+  return app::ResolveAutoThemeDark(BuildAutoThemeInput())
+             ? app::ThemeMode::kDark
+             : app::ThemeMode::kLight;
+}
+
+void ApplyThemeFromSetting() {
+  const auto setting = static_cast<app::ThemeMode>(g_theme_mode.load());
+  const app::ThemeMode theme = ResolveThemeSetting();
+  if (theme == pages::CurrentTheme()) {
+    return;
+  }
+  // ApplyTheme() 已经对所有页面（含当前页）调用 OnThemeChanged；主题变化
+  // 本身不改设置页的档位文案，所以这里不再 RefreshCurrent()。
+  // 档位文案由 ToggleTheme() 在改完设置后单独刷新。
+  g_page_manager->ApplyTheme(theme);
+  ESP_LOGI(kTag, "主题 -> %s（设置 %s）", app::ThemeModeName(theme),
+           app::ThemeModeName(setting));
 }
 
 // 长按恢复出厂页：清 NVS 并重启。
@@ -148,6 +222,10 @@ void SwitchToPage(app::PageType page) {
 
 void StartButtonPolling() {
   lv_timer_create(PollButtonTimer, kButtonPollMs, nullptr);
+}
+
+void StartThemeCheck() {
+  lv_timer_create(ThemeCheckTimer, kThemeCheckMs, nullptr);
 }
 
 }  // namespace dida

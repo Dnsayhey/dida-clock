@@ -37,8 +37,18 @@ app::ForecastViewData BuildForecastData();
 // 单击：切换亮度档位。
 void CycleBrightness();
 
-// 长按：切换浅色/深色主题。
+// 长按：切换主题（浅色 → 深色 → 自动）。
 void ToggleTheme();
+
+// 主题：把设置（可能是"自动"）解析成此刻实际该用的主题。
+// "自动"跟日出日落走，需要时钟 / 日出日落 / 环境光 —— 只有装配层拿得到。
+app::ThemeMode ResolveThemeSetting();
+
+// 把主题设置应用到所有页面（UI 任务调用）。
+// 解析出的主题与当前一致时**什么都不做**：PageManager::ApplyTheme 会重设
+// 每一个已创建页面，代价不小，而它每分钟都会被自动档的检查调到。
+// 只负责应用配色；设置页的"档位文案"由 ToggleTheme() 单独刷新。
+void ApplyThemeFromSetting();
 
 // 恢复出厂：清 NVS 并重启。
 void DoFactoryReset();
@@ -56,5 +66,9 @@ void SwitchToPage(app::PageType page);
 // 创建按键轮询定时器。**必须在持有 LVGL 锁时调用** ——
 // 定时器回调跑在 LVGL 任务里，创建也必须在该任务的上下文里完成。
 void StartButtonPolling();
+
+// 创建主题检查定时器（自动档要跟着日出日落走，需要低频复查）。
+// 同样必须在持有 LVGL 锁时调用 —— 主题只能由 UI 任务改（见 pages/ui_theme.h）。
+void StartThemeCheck();
 
 }  // namespace dida
