@@ -6,6 +6,7 @@
 
 #include "assets/astronaut.h"
 #include "assets/fonts.h"
+#include "assets/weather_icons.h"
 #include "pages/ui_theme.h"
 
 namespace pages {
@@ -134,6 +135,12 @@ void RealTimeWeatherPage::Create() {
   // ---- 底部：天气 / 温度 / 完整名 / 城市 / 空气质量 ----
   weather_label_ =
       MakeLabel(root, assets::kFontWeather, kWeatherX, kBlockTop, 0, 0);
+  // 天气图标与分类大字共用同一个槽位：有官方 icon 代码时显示图标，
+  // 找不到时回退到上面的分类文字。
+  weather_icon_image_ = lv_image_create(root);
+  lv_obj_set_pos(weather_icon_image_, kWeatherX, kBlockTop);
+  lv_obj_set_size(weather_icon_image_, 40, 40);
+  lv_obj_add_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
   temperature_label_ = MakeLabel(root, assets::kFontTemperature, kTemperatureX,
                                  kBlockTop + 8, 0, 0);
   weather_text_label_ = MakeLabel(root, assets::kFontBody, kTextX,
@@ -204,8 +211,13 @@ void RealTimeWeatherPage::ApplyColors(const app::WeatherPageViewData& data) {
 
   // 天气大字与徽章的颜色取决于数据。放在这里、且只由内容变化驱动：
   // 设置样式同样是**无条件** invalidate，每秒写一次就等于每秒重绘这两个区域。
-  lv_obj_set_style_text_color(
-      weather_label_, lv_color_hex(WeatherColor(data.weather_category)), 0);
+  const uint32_t weather_color = WeatherColor(data.weather_category);
+  lv_obj_set_style_text_color(weather_label_, lv_color_hex(weather_color), 0);
+  // 图标是 A4（只有透明度），用 recolor 上色；和文字共用同一套天气色，
+  // 深浅主题/自动主题切换时只要重新调用本函数即可。
+  lv_obj_set_style_image_recolor(weather_icon_image_,
+                                 lv_color_hex(weather_color), 0);
+  lv_obj_set_style_image_recolor_opa(weather_icon_image_, LV_OPA_COVER, 0);
   if (!data.aqi_category.empty()) {
     lv_obj_set_style_bg_color(
         aqi_badge_, lv_color_hex(AqiBadgeColor(data.aqi_category)), 0);
@@ -377,12 +389,28 @@ void RealTimeWeatherPage::RefreshContent(uint32_t version) {
   // ---- 滚动信息条 ----
   lv_label_set_text(ticker_label_, data.ticker.c_str());
 
-  // ---- 天气大字 ----
-  // 分类为空（官方表外的 icon 代码，如 900 热 / 999 未知）时**不猜**，
-  // 直接把官方完整 text 放进大字位 —— 宁可字长一点，也不谎报天气。
-  const bool has_category = !data.weather_category.empty();
-  lv_label_set_text(weather_label_, has_category ? data.weather_category.c_str()
-                                                 : data.weather_text.c_str());
+  // ---- 天气图标 / 大字 ----
+  // 精确 icon 代码优先显示 40x40 图标；否则回退到分类大字，
+  // 分类也为空（表外代码）时把官方完整 text 放进大字位 —— 不猜。
+  const lv_image_dsc_t* weather_icon =
+      assets::WeatherIcon(data.weather_icon.c_str());
+  const bool has_icon = weather_icon != nullptr;
+  const bool ready = data.status.empty();
+  if (ready && has_icon) {
+    lv_image_set_src(weather_icon_image_, weather_icon);
+    lv_obj_remove_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
+  } else if (ready) {
+    const bool has_category = !data.weather_category.empty();
+    lv_label_set_text(weather_label_, has_category
+                                          ? data.weather_category.c_str()
+                                          : data.weather_text.c_str());
+    lv_obj_add_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
+  } else {
+    lv_obj_add_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
+  }
   lv_label_set_text(weather_text_label_, data.weather_text.c_str());
 
   lv_label_set_text(temperature_label_, data.temperature.c_str());
@@ -399,15 +427,12 @@ void RealTimeWeatherPage::RefreshContent(uint32_t version) {
   // ---- 未就绪提示 ----
   // 有数据时把提示藏起来（而不是留一行空白），并把天气区显示出来；
   // 没数据时反过来，让提示占据天气区的位置，避免两段文字叠在一起。
-  const bool ready = data.status.empty();
   if (ready) {
     lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(temperature_label_, LV_OBJ_FLAG_HIDDEN);
   } else {
     lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(status_label_, data.status.c_str());
-    lv_obj_add_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(temperature_label_, LV_OBJ_FLAG_HIDDEN);
   }
 }

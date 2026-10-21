@@ -18,7 +18,7 @@ namespace pages {
 //      ────────────────────     分隔线
 //      东风 4级 · 体感 25℃ ...    16px 灰，循环滚动
 //      ────────────────────
-//      雨           22℃          44px 天气色 + 26px 强调色
+//      [图标]       22℃          40px 天气色图标 + 26px 强调色
 //      中到大雨     杭州 [优]      16px 灰 + 16px 主题色 + 徽章
 //                          [太空人]
 //
@@ -74,7 +74,8 @@ class RealTimeWeatherPage : public Page {
   lv_obj_t* seconds_label_ = nullptr;       // 秒
   lv_obj_t* divider_ = nullptr;             // 分隔线
   lv_obj_t* ticker_label_ = nullptr;        // 滚动信息条
-  lv_obj_t* weather_label_ = nullptr;       // 天气大字（9 类短名）
+  lv_obj_t* weather_label_ = nullptr;       // 天气大字（9 类短名，回退用）
+  lv_obj_t* weather_icon_image_ = nullptr;  // 40x40 天气图标（A4 + recolor）
   lv_obj_t* weather_text_label_ = nullptr;  // 天气完整名
   lv_obj_t* temperature_label_ = nullptr;   // 温度
   lv_obj_t* city_label_ = nullptr;          // 城市（adm2）

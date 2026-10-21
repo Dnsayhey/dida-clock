@@ -187,6 +187,7 @@ WeatherPageViewData FormatWeatherPage(const store::WeatherSnapshot& snapshot,
     // 大字用分类（最多 2 字），小字用官方完整 text —— 两者都给，不丢信息。
     // 分类取自 icon 代码而不是 text：icon 与语言无关，改 lang 不会让它失效。
     data.weather_category = weather::WeatherCategoryName(snapshot.now.icon);
+    data.weather_icon = snapshot.now.icon;
     data.weather_text = snapshot.now.text;
     data.temperature = snapshot.now.temp + "℃";
 

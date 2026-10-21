@@ -88,6 +88,7 @@ struct WeatherPageViewData {
 
   std::string city;  // "萧山"（搜索命中的 name；回退 adm2/配置地名）
   std::string weather_category;  // "雨"（9 类之一；官方表外的代码为空串）
+  std::string weather_icon;      // 官方 icon 代码 "305"/"150"/"999"，用于选图标
   std::string weather_text;      // "中到大雨"（官方 text，完整，不截断）
   std::string temperature;       // "22℃"
   std::string aqi_category;      // 官方原文 "优"/"轻度污染"，页面据此取徽章底色

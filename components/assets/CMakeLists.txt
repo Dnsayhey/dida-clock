@@ -7,6 +7,7 @@ idf_component_register(
         "font/dida_num_26.c"
         "font/dida_num_64.c"
         "image/dida_astro.c"
+        "image/dida_weather_icons.c"
     INCLUDE_DIRS "include"
     REQUIRES lvgl
 )

@@ -282,6 +282,7 @@ TEST_CASE(WeatherPage_完整的就绪数据) {
 
   // 大字用分类，小字用官方完整名 —— 两者都要有，信息不丢
   CHECK_EQ(data.weather_category, std::string("雨"));
+  CHECK_EQ(data.weather_icon, std::string("305"));
   CHECK_EQ(data.weather_text, std::string("中到大雨"));
   CHECK_EQ(data.temperature, std::string("25℃"));
   // 滚动信息条：四段用 " · " 连接
@@ -336,8 +337,9 @@ TEST_CASE(WeatherPage_表外icon不给出分类但保留完整名) {
     store.MarkReady(weather::DataSource::kCurrentConditions, 1);
   }
   const auto data = FormatWeatherPage(store.Snapshot(), "杭州");
-  // 分类为空 -> 页面会把完整 text 放进大字位；绝不能填一个"晴"上去
+  // 分类为空 -> 页面用 icon 代码选 900 的图标；绝不能填一个"晴"上去
   CHECK_EQ(data.weather_category, std::string(""));
+  CHECK_EQ(data.weather_icon, std::string("900"));
   CHECK_EQ(data.weather_text, std::string("热"));
   CHECK_EQ(data.temperature, std::string("38℃"));
 }
