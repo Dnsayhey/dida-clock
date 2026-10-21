@@ -11,6 +11,7 @@ dependencies.lock
 main/include/device_config_local.h
 main/include/weather_config_local.h
 main/include/time_config_local.h
+main/include/ota_config_local.h
 
 # macOS 元数据
 .DS_Store

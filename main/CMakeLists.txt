@@ -17,7 +17,8 @@ if(NOT CMAKE_SCRIPT_MODE_FILE)
     file(GLOB _dida_opt_local CONFIGURE_DEPENDS
          "${CMAKE_CURRENT_LIST_DIR}/include/device_config_local.h"
          "${CMAKE_CURRENT_LIST_DIR}/include/weather_config_local.h"
-         "${CMAKE_CURRENT_LIST_DIR}/include/time_config_local.h")
+         "${CMAKE_CURRENT_LIST_DIR}/include/time_config_local.h"
+         "${CMAKE_CURRENT_LIST_DIR}/include/ota_config_local.h")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/device_config_local.h")
@@ -35,19 +36,28 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/time_config_local.h")
 else()
     set(DIDA_HAS_TIME_CONFIG_LOCAL 0)
 endif()
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/ota_config_local.h")
+    set(DIDA_HAS_OTA_CONFIG_LOCAL 1)
+else()
+    set(DIDA_HAS_OTA_CONFIG_LOCAL 0)
+endif()
 
 idf_component_register(SRCS "app_main.cpp" "runtime.cpp"
                             "startup_task.cpp" "startup_flow.cpp"
                             "ui_wiring.cpp" "selftest.cpp" "dev_config.cpp"
+                            "ota_update.cpp"
                        INCLUDE_DIRS "." "include"
                        REQUIRES board display assets weather store pipeline
                                 decompress scheduler pages storage net app portal
                                 backlight input
-                       PRIV_REQUIRES nvs_flash esp_app_format esp_system heap)
+                       PRIV_REQUIRES nvs_flash esp_app_format esp_system heap
+                                     esp_https_ota bootloader_support app_update
+                                     cjson mbedtls)
 
 if(NOT CMAKE_SCRIPT_MODE_FILE)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE
         DIDA_HAS_DEVICE_CONFIG_LOCAL=${DIDA_HAS_DEVICE_CONFIG_LOCAL}
         DIDA_HAS_WEATHER_CONFIG_LOCAL=${DIDA_HAS_WEATHER_CONFIG_LOCAL}
-        DIDA_HAS_TIME_CONFIG_LOCAL=${DIDA_HAS_TIME_CONFIG_LOCAL})
+        DIDA_HAS_TIME_CONFIG_LOCAL=${DIDA_HAS_TIME_CONFIG_LOCAL}
+        DIDA_HAS_OTA_CONFIG_LOCAL=${DIDA_HAS_OTA_CONFIG_LOCAL})
 endif()

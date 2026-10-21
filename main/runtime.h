@@ -56,7 +56,7 @@ struct Pages {
   pages::FutureWeatherPage future_weather{&BuildForecastData};
   pages::ThemeSettingsPage theme_settings{&BuildSettingsData, &CycleBrightness,
                                           &ToggleTheme};
-  pages::FactoryResetPage factory_reset{&DoFactoryReset};
+  pages::FactoryResetPage factory_reset{&DoFactoryReset, &BuildFirmwareVersion};
 };
 
 extern std::unique_ptr<Pages> g_pages;

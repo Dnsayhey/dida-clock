@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <string>
 
 #include "pages/page.h"
 
@@ -14,6 +15,7 @@ namespace pages {
 //         ──────────
 //         将清除所有配置
 //         Wi-Fi 与位置都会丢失      16px 灰
+//            v0.2.0              16px 灰，居中
 //         ──────────
 //         长按执行                 危险红 —— 全页只有这一行是红的
 //         双击返回                 16px 灰
@@ -28,8 +30,9 @@ namespace pages {
 class FactoryResetPage : public Page {
  public:
   using ResetAction = std::function<void()>;
+  using VersionSource = std::function<std::string()>;
 
-  explicit FactoryResetPage(ResetAction on_reset);
+  FactoryResetPage(ResetAction on_reset, VersionSource version_source);
 
   void Create() override;
   void OnLongPress() override;
@@ -39,7 +42,9 @@ class FactoryResetPage : public Page {
   void ApplyColors();
 
   ResetAction on_reset_;
+  VersionSource version_source_;
   lv_obj_t* title_label_ = nullptr;
+  lv_obj_t* version_label_ = nullptr;
   lv_obj_t* divider_ = nullptr;
   lv_obj_t* warn_label_ = nullptr;
   lv_obj_t* warn2_label_ = nullptr;

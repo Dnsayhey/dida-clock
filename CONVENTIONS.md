@@ -483,12 +483,15 @@ WeatherStore store = MakeReadyStore();   // ✗ 需要拷贝/移动
 | 关闭 LVGL 默认主题 | 它会引用每个 widget 类，拉入全部 widget 代码（省 91.6 KB） |
 | LVGL 用 CLIB 内存实现 | 自带分配器静态占 64 KB DRAM |
 | 双 OTA 槽各 1.94 MB | 4 MB flash 下不让 `factory` 分区参与；槽大小按 64KB 对齐，两个等大槽最大只能到 `0x1F0000`，末尾余 64KB；槽大小必须在首台设备启用 OTA 前定死 |
+| OTA 只在启动时检查，失败跳过 | 单按键设备不打断日常使用；manifest/固件失败不阻塞启动，旧固件继续运行，下次开机再试 |
+| OTA manifest 用语义化版本 + 可选 size | 远端版本必须大于当前才更新，避免服务器误操作降级；size 在下载前挡住超过 inactive 槽的镜像 |
+| OTA rollback + 启动健康后 mark valid | bootloader 先以 pending verify 启动；应用走到 `kReady` 才 `esp_ota_mark_app_valid_cancel_rollback()`，坏固件在 mark 前崩溃/复位会自动回滚 |
 | 数据流水线独立成 `pipeline` 组件 | `namespace sync` 与 POSIX `sync()` 冲突（同 `system` → `scheduler`） |
 | 界面字体用 LVGL 内置 Montserrat 16 | 它没有本项目需要的汉字；且英文比中文宽，20 号下长文案会超屏宽 |
 | 所有 API 请求带 `lang=zh` | 界面是中文；不带这个参数会拿到英文，本地还得再翻译一层 |
 | `swap_bytes=true` **且** `BGR=0` | RGB565 的 5-6-5 字段不按字节对齐，字节序与 BGR 位必须配对；四种组合只有这一种颜色正确 |
 | WiFi 驱动初始化放在装配层 | STA 与强制门户是两条互斥路径，只有前者会调 `WifiStation::Begin()` |
-| 表单体只读一次再解析 | `httpd_req_recv()` 会消费请求体，逐字段读取只有第一个有值 |
+| 表单体循环读到 Content-Length | `httpd_req_recv()` 可能短读；单次 recv 会丢掉 TCP 分片后的字段 |
 
 新增决策请追加到 §15 决策记录（本表），**不要只写在提交信息里**。
 
@@ -530,9 +533,9 @@ source ~/esp/idf61.sh && idf.py build  # 固件构建
 python3 scripts/gen_fonts.py           # 会扫描源码 + 城市字集 + 运行期词汇
 ```
 
-三项全绿才算完成。若改动涉及分区表，还需 `idf.py flash -a` 全量烧录。
+四项全绿才算完成。若改动涉及分区表，还需 `idf.py flash -a` 全量烧录。
 
-**但"三项全绿"不等于"能跑"。** 本项目实机暴露过的缺陷里，**绝大多数都通过了构建与测试**——
+**但"四项全绿"不等于"能跑"。** 本项目实机暴露过的缺陷里，**绝大多数都通过了构建与测试**——
 因为它们是"**代码写对了，但那条路径从未被执行过**"：
 
 | 从未执行的路径 | 为什么一直没被发现 |
@@ -541,6 +544,7 @@ python3 scripts/gen_fonts.py           # 会扫描源码 + 城市字集 + 运行
 | 浅色主题下的页面创建 | 一直跑在深色主题上 |
 | gzip 解压 | 只有真实响应才会触发 |
 | HTTPS 证书校验 | 主机测试里从未真连过 |
+| OTA 失败路径 / 回滚 | 只有主动断开 manifest/固件或做坏固件才会触发；成功升级一次覆盖不到 |
 
 **所以第四项是：实机跑一遍受影响的路径。** 判断"哪些路径没被跑过"只需问一句：
 

@@ -1,5 +1,6 @@
 #include "ui_wiring.h"
 
+#include <esp_app_desc.h>
 #include <esp_heap_caps.h>
 #include <esp_log.h>
 #include <esp_system.h>
@@ -55,6 +56,10 @@ app::SettingsViewData BuildSettingsData() {
   return app::FormatSettingsView(
       static_cast<backlight::BrightnessMode>(g_brightness_mode.load()),
       static_cast<app::ThemeMode>(g_theme_mode.load()));
+}
+
+std::string BuildFirmwareVersion() {
+  return esp_app_get_description()->version;
 }
 
 app::ClockViewData BuildClockView() {

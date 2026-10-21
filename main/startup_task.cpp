@@ -11,6 +11,7 @@
 #include "net/network_status.h"
 #include "net/sntp.h"
 #include "net/wifi_station.h"
+#include "ota_update.h"
 #include "pipeline/weather_sync.h"
 #include "runtime.h"
 #include "scheduler/app_scheduler.h"
@@ -129,6 +130,11 @@ void RunStartupSequence(StartupContext& ctx) {
     app::GetStartupStatus().Set(app::StartupPhase::kSyncingTime);
     net::WaitForTime(15000);
 
+    // 必须在 SNTP 之后：HTTPS 证书要用真实时间校验；本地 HTTP 测试不敏感，
+    // 但正式源走 HTTPS 时在 1970 年校验证书会直接失败。
+    // 正式固件没有 ota_config_local.h，这里直接返回。
+    RunOtaUpdateIfConfigured();
+
     app::GetStartupStatus().Set(app::StartupPhase::kSyncingWeather);
     if (!sync.EnsureLocation(g_device_config)) {
       ESP_LOGW(kTag, "[net] 无法确定位置，天气同步将不可用");
@@ -215,6 +221,10 @@ void RunStartupSequence(StartupContext& ctx) {
   // 决策在 startup_flow，实际切页由注入的回调完成 ——
   // 本模块因此不需要知道任何 UI / LVGL 细节。
   EnterInitialPage(portal_mode, g_on_navigate);
+
+  // 启动流程已走到这里（显示/Wi-Fi/调度器都就绪），可以确认 OTA 固件有效。
+  // 若应用在这之前崩溃/重启，bootloader 会回滚到上一版。
+  MarkOtaAppValidIfNeeded();
 }
 
 // 常驻阶段：调度器心跳。

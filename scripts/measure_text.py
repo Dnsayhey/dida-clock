@@ -140,13 +140,15 @@ SLOTS = [
     ("future_weather 日期", "dida_cn_16", 50,
      ["10-09", "10-10", "08-08", "09-28", "12-31", "01-01"]),
     ("future_weather 星期", "dida_cn_16", 34, ["周一", "周六", "周日", "今天"]),
+    # 天气列使用滚动（放不下才滚），因此允许超宽。
     ("future_weather 天气", "dida_cn_16", 66,
-     ["晴", "多云", "雷阵雨", "中到大雪", "雷阵雨伴有冰雹"]),
+     ["晴", "多云", "雷阵雨", "中到大雪", "雷阵雨伴有冰雹"], True),
     ("future_weather 温度", "dida_cn_16", 66,
      ["16/26℃", "20/30℃", "08/09℃", "-8/-3℃"]),
     # 大字天气槽位已删除：实时页改用 40px A4 图标，不再渲染 44px 分类汉字。
-    ("real_time 城市", "dida_cn_16", 48, ["杭州", "乌鲁木齐", "呼和浩特"]),
-    ("real_time 天气全名", "dida_cn_16", 56, ["晴", "中到大雨", "雷阵雨伴有冰雹"]),
+    # 城市用 DOTS 省略，天气全名用滚动，均允许超宽。
+    ("real_time 城市", "dida_cn_16", 48, ["杭州", "乌鲁木齐", "呼和浩特"], True),
+    ("real_time 天气全名", "dida_cn_16", 56, ["晴", "中到大雨", "雷阵雨伴有冰雹"], True),
 ]
 
 
@@ -156,7 +158,9 @@ def main():
         bad = 0
         print(f"  {'槽位':<26}{'槽宽':>5}{'最宽内容':>10}{'需要':>7}{'余量':>8}")
         print("  " + "-" * 58)
-        for name, font_name, slot, samples in SLOTS:
+        for entry in SLOTS:
+            name, font_name, slot, samples = entry[:4]
+            allow_overflow = len(entry) > 4 and entry[4]
             if font_name not in fonts:
                 fonts[font_name] = LvglFont(os.path.join(FONT_DIR, font_name + ".c"))
             f = fonts[font_name]
@@ -181,8 +185,12 @@ def main():
                       f"{'；'.join(missing)}")
                 continue
             margin = slot - worst
-            mark = "" if margin >= 0 else "  <-- 会换行/截断"
-            if margin < 0:
+            if margin >= 0:
+                mark = ""
+            elif allow_overflow:
+                mark = "  <-- 允许滚动/省略"
+            else:
+                mark = "  <-- 会换行/截断"
                 bad += 1
             print(f"  {name:<26}{slot:>5}{worst_txt:>10}{worst:>6}px{margin:>+7}px{mark}")
         print()

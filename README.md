@@ -12,6 +12,7 @@
 | [docs/硬件说明.md](docs/硬件说明.md) | 板子、屏幕、按键、光敏、背光改造的硬件事实与接线 |
 | [docs/和风天气接口实测.md](docs/和风天气接口实测.md) | 和风天气各端点的真实请求与响应样本 |
 | [docs/界面原型渲染流程.md](docs/界面原型渲染流程.md) | 改界面前先画 HTML 原型、渲染成图再动代码 |
+| [docs/OTA更新.md](docs/OTA更新.md) | OTA 流程、manifest、版本、失败/回滚与上线前检查 |
 
 ---
 
@@ -25,7 +26,7 @@
 | **实时天气** | 日期、秒级时钟、滚动信息条（风向/体感/能见度/湿度）、天气图标 + 官方完整名、温度、地名（区县）、AQI 徽章、太空人动画 |
 | **7 日预报** | 日期 / 星期 / 天气 / 最低最高温 四列 |
 | **设置** | 亮度档位（自动/低/中/高）、主题（浅色/深色/自动） |
-| **恢复出厂** | 长按执行（Wi-Fi 与位置配置全部清除） |
+| **恢复出厂** | 长按执行（Wi-Fi 与位置配置全部清除）；显示固件版本号 |
 | **配网** | SoftAP + 强制门户，中文页面；配网热点为 `DIDA-XXXX` |
 
 启动页与配网页是**闸门页**，不响应任何按键 —— 没配网时按键跳到天气页只会看到空白，
@@ -70,12 +71,13 @@ idf.py -p /dev/tty.usbmodemXXXX flash monitor
 ```
 
 - 首次构建会联网拉取 `managed_components/`（LVGL、cJSON 等），它们不进版本库。
+- 固件版本在 `version.txt`，发布时修改它；manifest 的 `version` 必须一致。
 - 更换 `partitions.csv` 后必须**全量**烧录 `idf.py flash -a` —— IDF 6.1 的
   `idf.py flash` 默认是增量快速烧录。
 
 ### 可选本地配置
 
-下面三个头文件都被 git 忽略，各有一个 `.example.h` 模板。**不提供也能编译**，
+下面四个头文件都被 git 忽略，各有一个 `.example.h` 模板。**不提供也能编译**，
 只是对应功能不可用：
 
 | 文件 | 作用 | 不提供时 |
@@ -83,6 +85,7 @@ idf.py -p /dev/tty.usbmodemXXXX flash monitor
 | `main/include/device_config_local.h` | 开发默认 Wi-Fi / 位置，跳过配网 | 走强制门户配网 |
 | `main/include/weather_config_local.h` | 和风天气的 API Host 与 Key | 天气同步报"未配置"，界面给出提示 |
 | `main/include/time_config_local.h` | NTP 候选服务器 + 时区（默认中国） | 用 `time_config.h` 里的默认值 |
+| `main/include/ota_config_local.h` | OTA manifest 地址（本地测试 / 临时配置） | OTA 检查不启用 |
 
 ### 目录与分层
 
@@ -130,18 +133,33 @@ idf.py build                            # 固件构建
 
 ---
 
+## OTA 更新
+
+启动时（SNTP 之后）检查 manifest，有新版本就自动写入 inactive 槽并重启；
+manifest/固件请求失败、版本不新、镜像不合法都会跳过并继续启动旧固件。
+bootloader 回滚已开启，新固件在启动健康后才会 mark valid。
+
+manifest、版本规则、失败矩阵、本地测试与上线前检查见
+[docs/OTA更新.md](docs/OTA更新.md)。
+
+当前 `ota_config_local.h` 被 git 忽略；正式上线前还需要补一个可提交的默认
+manifest URL，并在正式构建中关闭 HTTP OTA。
+
+---
+
 ## 尺寸与内存
 
-固件约 **1.5 MiB**，OTA 槽 1.94 MiB（余量约 24%，约 477 KB）。大头是网络栈
+固件约 **1.5 MiB**，OTA 槽 1.94 MiB（余量约 23%，约 449 KB）。大头是网络栈
 （wpa_supplicant / TF-PSA-Crypto / lwIP），不是应用代码。
 
 应用侧最大的单项是**字库**：正文 16px 约 185 KB，因为地名要覆盖省 ∪ 市 ∪ 区县
 （1297 字）；每多一个 16px 字形约 **128 字节**（4bpp 16×16 点阵）。天气图标是
 70 个 40x40 A4 掩码，共约 **55 KB**。
 
-已做的两项体积取舍 —— **关掉 LVGL 默认主题**（它引用每个 widget 类，是 LVGL 链接后
-达 ~260 KB 的主因）与**让 LVGL 走系统堆**（自带分配器静态占 64 KB DRAM）——
-各自的代价与实测数字记在 `sdkconfig.defaults` 的注释里。
+已做的三项体积取舍 —— **关掉 LVGL 默认主题**（它引用每个 widget 类，是 LVGL 链接后
+达 ~260 KB 的主因）、**让 LVGL 走系统堆**（自带分配器静态占 64 KB DRAM）与
+**`-Os` 编译**（比 `-Og` 省约 126 KB，断言仍开启）——各自的代价与实测数字记在
+`sdkconfig.defaults` 的注释里。
 
 ---
 

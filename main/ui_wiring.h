@@ -12,6 +12,7 @@
 //   * StartButtonPolling 与各数据回调 —— 运行在 LVGL 任务上下文。
 
 #include <cstdint>
+#include <string>
 
 #include "app/page_type.h"
 #include "app/settings_view_data.h"
@@ -24,6 +25,8 @@ namespace dida {
 // 页面不认识 net / store / config，装配层在这里把数据组装成纯值对象交给它们。
 
 app::SettingsViewData BuildSettingsData();
+// 固件版本号，供恢复出厂页显示；页面层因此不依赖 esp_app_desc。
+std::string BuildFirmwareVersion();
 // 时钟与天气内容分开：前者每秒都要读，后者最快 30 分钟才变一次。
 // 合成一个回调会让"只为看秒"也付一次完整天气快照的代价。
 app::ClockViewData BuildClockView();
