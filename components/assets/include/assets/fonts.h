@@ -18,7 +18,6 @@ extern "C" const lv_font_t dida_num_64;  // 时间（等宽数字）
 extern "C" const lv_font_t dida_num_26;  // 温度
 extern "C" const lv_font_t dida_num_22;  // 秒（等宽数字）
 extern "C" const lv_font_t dida_cn_28;   // 页面标题
-extern "C" const lv_font_t dida_cn_44;   // 天气大字
 extern "C" const lv_font_t dida_cn_16;   // 正文（中文 + 拉丁混排）
 
 namespace assets {
@@ -36,8 +35,6 @@ inline constexpr const lv_font_t* kFontSeconds = &dida_num_22;
 inline constexpr const lv_font_t* kFontTemperature = &dida_num_26;
 // 页面标题：28px，只含各页标题用到的字
 inline constexpr const lv_font_t* kFontTitle = &dida_cn_28;
-// 天气大字：44px，只含 9 类短名
-inline constexpr const lv_font_t* kFontWeather = &dida_cn_44;
 // 正文：16px，日期/城市/滚动信息条/天气全名/状态文字都用它
 inline constexpr const lv_font_t* kFontBody = &dida_cn_16;
 

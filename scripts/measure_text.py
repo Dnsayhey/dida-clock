@@ -69,8 +69,8 @@ class LvglFont:
         #
         # 判据不能只看有没有 "kern_classes" 这个字符串：字库描述符里
         # `.kern_classes = 0`（没有 kern 表）也会命中，随后去读
-        # kern_left_class_mapping 就崩了 —— 纯汉字子集字库（如 dida_cn_44，
-        # 只有 12 个汉字、无 ASCII）正是这种情况。
+        # kern_left_class_mapping 就崩了 —— 纯汉字子集字库（只有少量汉字、
+        # 无 ASCII）正是这种情况。
         # 必须确认三张表本体都在。
         # 判据有两层，缺一不可：
         #   1. 三张 kern 表本体在（生成物里它们总是被写出来）；
@@ -131,18 +131,6 @@ class LvglFont:
         return total
 
 
-def weather_categories():
-    """从 weather_category.cpp 里读出九个分类名。
-
-    **样本必须从源码来，不能手写。** 手写的样本表有个致命弱点：代码改了它不知道。
-    这个槽位就栽过 —— 样本里写着单字，而代码里"多云/冰雹/沙尘"是两个字的，
-    检查一路绿灯，实机上大字压住温度 30px。
-    """
-    src = io.open(os.path.join(ROOT, "components", "weather",
-                               "weather_category.cpp"), encoding="utf-8").read()
-    return re.findall(r'constexpr char k\w+\[\] = "([^"]+)";', src)
-
-
 # 页面上的固定宽度槽位：(页面, 字体, 槽宽, 内容说明, 内容)
 SLOTS = [
     # 日期列：**必须按最宽的日期测**，不能只看当天。
@@ -156,13 +144,7 @@ SLOTS = [
      ["晴", "多云", "雷阵雨", "中到大雪", "雷阵雨伴有冰雹"]),
     ("future_weather 温度", "dida_cn_16", 66,
      ["16/26℃", "20/30℃", "08/09℃", "-8/-3℃"]),
-    # 大字天气：它**没有独立槽位**，而是"必须在大字起点到温度起点之间放得下"。
-    # 也就是说可用宽度 = kTemperatureX - kWeatherX = 72 - 14 = 58px。
-    #
-    # 这一项曾经漏登记，代价是：多云/冰雹/沙尘 三个分类是两个字（88px），
-    # 实机上直接压住温度 30px。**分类名必须是单字**，理由见 weather_category.cpp。
-    # 样本直接来自 weather_category.cpp —— 手写会随代码漂移（见该函数注释）
-    ("real_time 大字天气", "dida_cn_44", 58, weather_categories()),
+    # 大字天气槽位已删除：实时页改用 40px A4 图标，不再渲染 44px 分类汉字。
     ("real_time 城市", "dida_cn_16", 48, ["杭州", "乌鲁木齐", "呼和浩特"]),
     ("real_time 天气全名", "dida_cn_16", 56, ["晴", "中到大雨", "雷阵雨伴有冰雹"]),
 ]

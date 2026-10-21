@@ -49,10 +49,6 @@ SHS = os.path.join(
 )
 MON = os.environ.get("MONTSERRAT", "/tmp/fonts/Montserrat-Medium.ttf")
 
-# 天气大字只需 9 类短名 —— 官方 text 长短差异极大（"晴"1 字 ↔
-# "雷阵雨伴有冰雹"7 字），固定字号放不下，所以大字用分类、小字给完整名。
-WEATHER_SHORT = "晴云阴雨雷雹雪雾沙"
-
 # 页面标题。它们用 28px，与正文分属不同字号，所以必须单独列。
 # 新增页面标题时把它加到这里。
 TITLE_CHARS = "配网日预报设置恢复出厂"
@@ -247,7 +243,7 @@ def main():
 
     print(f"  城市 {len(city)} 字 + 运行期 {len(runtime)} 字 + 源码 "
           f"{len(source)} 字 → 正文去重 {len(body_cn)} 字")
-    print(f"  标题 {len(title)} 字，天气大字 {len(WEATHER_SHORT)} 字")
+    print(f"  标题 {len(title)} 字")
 
     # 时间：64px 纯数字，**等宽**
     #
@@ -261,20 +257,18 @@ def main():
     make_tabular(gen("dida_num_22", 22, [(MON, "0123456789")]))
     # 页面标题：28px
     gen("dida_cn_28", 28, [(MON, latin), (SHS, title)])
-    # 天气大字：44px，9 类短名
-    gen("dida_cn_44", 44, [(SHS, WEATHER_SHORT)])
     # 正文：16px，中文 + 拉丁混排
     gen("dida_cn_16", 16, [(MON, latin), (SHS, body_cn + "℃·")])
 
     # 导出覆盖清单。校验脚本拿它比对源码用字，缺字就报错 ——
     # 这样"改了文案忘记重新生成字库"不会拖到烧板子才发现。
-    covered = set(body_cn) | set(title) | set(WEATHER_SHORT) | set("℃·")
+    covered = set(body_cn) | set(title) | set("℃·")
     with open(os.path.join(FONT_DIR, "COVERAGE.txt"), "w", encoding="utf-8") as f:
         f.write("".join(sorted(covered)) + "\n")
 
     total = 0
     for name in ("dida_num_64", "dida_num_26", "dida_num_22", "dida_cn_28",
-                 "dida_cn_44", "dida_cn_16"):
+                 "dida_cn_16"):
         path = os.path.join(FONT_DIR, f"{name}.c")
         size = os.path.getsize(path)
         total += size

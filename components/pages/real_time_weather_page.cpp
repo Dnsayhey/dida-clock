@@ -62,6 +62,10 @@ constexpr int kAstroY = (kBlockTop + kBlockBottom) / 2 - kAstroSize / 2;
 // 能立刻把"秒"从"时:分"里区分出来。
 constexpr uint32_t kSecondsColor = 0xFF3B30;
 
+// 表外天气代码（上游新增/预警代码误传）的占位图标：QWeather 999「未知」。
+// 比回退到文字更稳 —— 新天气的中文不可能预先出现在字库里。
+constexpr char kUnknownWeatherIconCode[] = "999";
+
 // 太空人换帧的节拍。每 tick 换一帧，tick 周期见 kAstroIntervalMs。
 constexpr unsigned kAstroFramesPerTick = 1;
 
@@ -132,11 +136,7 @@ void RealTimeWeatherPage::Create() {
   // 而且滚动时任一时刻只看得到一半。
   lv_label_set_long_mode(ticker_label_, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
 
-  // ---- 底部：天气 / 温度 / 完整名 / 城市 / 空气质量 ----
-  weather_label_ =
-      MakeLabel(root, assets::kFontWeather, kWeatherX, kBlockTop, 0, 0);
-  // 天气图标与分类大字共用同一个槽位：有官方 icon 代码时显示图标，
-  // 找不到时回退到上面的分类文字。
+  // ---- 底部：图标 / 温度 / 完整名 / 城市 / 空气质量 ----
   weather_icon_image_ = lv_image_create(root);
   lv_obj_set_pos(weather_icon_image_, kWeatherX, kBlockTop);
   lv_obj_set_size(weather_icon_image_, 40, 40);
@@ -190,7 +190,7 @@ void RealTimeWeatherPage::ApplyColors(const app::WeatherPageViewData& data) {
   ApplyTextRole(date_label_, TextRole::kText);
   ApplyTextRole(time_label_, TextRole::kText);
   // 滚动条是"可读可不读"的补充信息（风向/体感/能见度），天气全名也只是
-  // 上方那个大字的精确化说明 —— 这两处用灰色是对的。
+  // 上方那个图标的精确化说明 —— 这两处用灰色是对的。
   ApplyTextRole(ticker_label_, TextRole::kDim);
   ApplyTextRole(weather_text_label_, TextRole::kDim);
   ApplyTextRole(city_label_, TextRole::kText);
@@ -209,12 +209,11 @@ void RealTimeWeatherPage::ApplyColors(const app::WeatherPageViewData& data) {
   lv_obj_set_style_image_recolor(astro_image_, lv_color_hex(colors.text), 0);
   lv_obj_set_style_image_recolor_opa(astro_image_, LV_OPA_COVER, 0);
 
-  // 天气大字与徽章的颜色取决于数据。放在这里、且只由内容变化驱动：
+  // 天气图标与徽章的颜色取决于数据。放在这里、且只由内容变化驱动：
   // 设置样式同样是**无条件** invalidate，每秒写一次就等于每秒重绘这两个区域。
   const uint32_t weather_color = WeatherColor(data.weather_category);
-  lv_obj_set_style_text_color(weather_label_, lv_color_hex(weather_color), 0);
-  // 图标是 A4（只有透明度），用 recolor 上色；和文字共用同一套天气色，
-  // 深浅主题/自动主题切换时只要重新调用本函数即可。
+  // 图标是 A4（只有透明度），用 recolor 上色；深浅主题/自动主题切换时
+  // 只要重新调用本函数即可。
   lv_obj_set_style_image_recolor(weather_icon_image_,
                                  lv_color_hex(weather_color), 0);
   lv_obj_set_style_image_recolor_opa(weather_icon_image_, LV_OPA_COVER, 0);
@@ -389,27 +388,20 @@ void RealTimeWeatherPage::RefreshContent(uint32_t version) {
   // ---- 滚动信息条 ----
   lv_label_set_text(ticker_label_, data.ticker.c_str());
 
-  // ---- 天气图标 / 大字 ----
-  // 精确 icon 代码优先显示 40x40 图标；否则回退到分类大字，
-  // 分类也为空（表外代码）时把官方完整 text 放进大字位 —— 不猜。
+  // ---- 天气图标 ----
+  // 实时页只显示图标：已知代码用精确图标，表外/空代码统一用 999 未知图标。
+  // 不再回退到 44px 分类汉字 —— 新天气的中文不在字库里，文字兜底不可靠。
   const lv_image_dsc_t* weather_icon =
       assets::WeatherIcon(data.weather_icon.c_str());
-  const bool has_icon = weather_icon != nullptr;
+  if (weather_icon == nullptr) {
+    weather_icon = assets::WeatherIcon(kUnknownWeatherIconCode);
+  }
   const bool ready = data.status.empty();
-  if (ready && has_icon) {
+  if (ready && weather_icon != nullptr) {
     lv_image_set_src(weather_icon_image_, weather_icon);
     lv_obj_remove_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
-  } else if (ready) {
-    const bool has_category = !data.weather_category.empty();
-    lv_label_set_text(weather_label_, has_category
-                                          ? data.weather_category.c_str()
-                                          : data.weather_text.c_str());
-    lv_obj_add_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
   } else {
     lv_obj_add_flag(weather_icon_image_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(weather_label_, LV_OBJ_FLAG_HIDDEN);
   }
   lv_label_set_text(weather_text_label_, data.weather_text.c_str());
 
