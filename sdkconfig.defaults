@@ -53,6 +53,10 @@ CONFIG_LV_FONT_DEFAULT_MONTSERRAT_14=y
 # 保留它主要是去掉这层兼容语义。
 CONFIG_LIBC_PICOLIBC_NEWLIB_COMPATIBILITY=n
 
+# ---- 编译优化：-Os ----
+# 比 -Og 省约 126KB；断言保持开启，调试体验会下降，发版/日常都以实机验证为准。
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
 # ---- LVGL 体积精简（历史：早期固件占 1.75MB 槽 83%，当时必须腾空间）----
 # 关闭 LVGL 默认主题：默认主题会引用**每一个** widget 类，从而把它们的代码
 # 全部拉进固件（这也是 LVGL 链接后达 ~260KB 的主因）。
